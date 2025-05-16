@@ -6,18 +6,16 @@ export const startListener = () => {
     const message = [
       '*Hello!*',
       '',
-      "*It's Easy to get started! send me telegram invite links and I'll ensure:*",
-      '',
-      '- No duplicate links exist in our chat',
-      '- No non-links exist in our chat',
-      '- Split links in a message into multiple messages',
-      '- Remove the original forwarder',
-      '- Remove expired links (works only on telegram links)',
+      "*It's Easy to get started! add me to your group, or send me your media*",
+      'And i will ensure that:',
+      '- No duplicate media exist in our chat',
+      '- No duplicate media exist in your group',
       '',
       '*Practical steps:*',
       '',
-      '1- Send me here invite links, or forward them to me here',
-      "2- That's it the bot will do the rest!",
+      '- Send me here invite links, or forward them to me here',
+      "- If you've added me to a group, make sure to give me full admin rights",
+      "- That's it the bot will do the rest!",
     ].join('\n')
 
     ctx.reply(message, { parse_mode: 'Markdown' })

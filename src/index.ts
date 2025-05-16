@@ -3,16 +3,16 @@ import to from 'await-to-js'
 import { bot } from './lib/bot'
 import { configDotenv } from 'dotenv'
 import { connectDb } from './db/connect-db'
-import { env } from './service/validate-env'
 import { headerLogs } from './service/header-logs'
 import { setCommands } from './functions/set-commands'
-import { whoamiListener } from './listeners/whoami.listener'
 import { helpListener } from './listeners/help.listener'
 import { startListener } from './listeners/start.listener'
-import { notificationsBot } from './lib/notifications-bot'
-import { decoupleListener } from './listeners/decouple.listener'
+import { whoamiListener } from './listeners/whoami.listener'
 import { registerBotListeners } from './utils/register-bot-listeners'
+import { spyMediaGroupListener } from './listeners/spy-media.listener'
+import { mediaDedupeListener } from './listeners/media-dedupe.listener'
 import { processTerminateListener } from './service/process-terminate-listeners'
+import { registerMessageListeners } from './utils/register-message-listeners'
 
 async function main() {
   configDotenv({ path: '../.env.local' })
@@ -23,17 +23,11 @@ async function main() {
     process.exit(-1)
   }
   console.log(`${chalk.greenBright.bold('[Success]')} connected`)
-  registerBotListeners([startListener, whoamiListener, helpListener, decoupleListener])
-
+  registerBotListeners([startListener, whoamiListener, helpListener])
+  registerMessageListeners([spyMediaGroupListener, mediaDedupeListener])
   setCommands()
-  await Promise.all([
-    env.NOTIFICATIONS_ENABLED
-      ? notificationsBot.launch(() => {
-          console.log(chalk.bold.greenBright('[Success]'), 'the notifications bot is running')
-        })
-      : undefined,
-    bot.launch(headerLogs),
-  ])
+
+  await bot.launch(headerLogs)
 
   processTerminateListener()
 }
